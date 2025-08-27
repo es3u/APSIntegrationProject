@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>الدفع | Amazon Payment Services — Tokenization</title>
+  <style>
+    body{ margin:0; font-family:system-ui,-apple-system,"Segoe UI",Tahoma,sans-serif; background:#0f172a; color:#e2e8f0; display:grid; place-items:center; min-height:100vh; }
+    .wrap{ width:min(720px, 94vw); background:#111827; padding:24px; border-radius:16px; box-shadow:0 10px 30px rgba(0,0,0,.35); }
+    h1{ margin:0 0 12px; font-size:20px }
+    label{ display:block; font-size:13px; color:#94a3b8; margin-bottom:6px }
+    input,select{ width:100%; padding:10px 12px; border-radius:10px; border:1px solid #334155; background:#0b1220; color:#e2e8f0 }
+    button{ margin-top:10px; width:100%; padding:12px 14px; border-radius:12px; background:#2563eb; color:#fff; border:0; cursor:pointer; font-weight:600 }
+    .err,.ok{ margin-top:12px; padding:10px 12px; border-radius:10px; display:none; font-size:13px }
+    .err{ background:#7f1d1d; color:#fecaca }
+    .ok{ background:#0b3d17; color:#c7f9cc }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>الدفع عبر APS — إصدار التوكن</h1>
+    <form id="payForm">
+      <label>رقم الطلب (merchant_reference)</label>
+      <input id="merchant_reference" placeholder="ORDER-1001" required />
+
+      <label>اللغة</label>
+      <select id="language">
+        <option value="en">English</option>
+        <option value="ar" selected>العربية</option>
+      </select>
+
+      <label>رقم البطاقة</label>
+      <input id="card_number" placeholder="4005550000000001" required />
+
+      <label>تاريخ الانتهاء (YYMM)</label>
+      <input id="expiry_date" placeholder="3005" maxlength="4" required />
+
+      <label>CVV</label>
+      <input id="cvv" placeholder="123" maxlength="4" required />
+
+      <label>اسم حامل البطاقة</label>
+      <input id="holder" placeholder="John Smith" />
+
+      <label><input type="checkbox" id="remember_me" /> احفظ البطاقة</label>
+
+      <button type="submit">إصدار التوكن والدفع</button>
+      <div id="err" class="err"></div>
+      <div id="ok" class="ok"></div>
+    </form>
+  </div>
+
+  <script>
+    const form = document.getElementById('payForm');
+    const errBox = document.getElementById('err');
+    const okBox  = document.getElementById('ok');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault(); errBox.style.display='none'; okBox.style.display='none';
+
+      const merchant_reference = document.getElementById('merchant_reference').value.trim();
+      const language = document.getElementById('language').value;
+      const card_number = document.getElementById('card_number').value.trim();
+      const expiry_date = document.getElementById('expiry_date').value.trim();
+      const cvv = document.getElementById('cvv').value.trim();
+      const holder = document.getElementById('holder').value.trim();
+      const remember_me = document.getElementById('remember_me').checked ? 'YES' : 'NO';
+
+      let prep;
+      try{
+        const res = await fetch('https://localhost:8290/aps/prepare-token',{
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ merchant_reference, language })
+        });
+        if(!res.ok){ throw new Error('فشل تحضير المعاملات: '+res.status); }
+        prep = await res.json();
+      }catch(ex){
+        comnsol.log(ex.message)
+        errBox.textContent = ex.message; errBox.style.display='block'; return;
+      }
+
+      const gatewayUrl = prep.gateway_url;
+      const p = prep.params || {};
+      if(!gatewayUrl || !p.signature){
+        errBox.textContent = 'الرد ناقص (مافي توقيع/بوابة)'; errBox.style.display='block'; return;
+      }
+
+      const f = document.createElement('form');
+      f.method = 'POST';
+      f.action = gatewayUrl;
+      f.target = '_blank';
+      f.acceptCharset = 'UTF-8';
+
+     
+      ['service_command','access_code','merchant_identifier','merchant_reference','language','return_url','signature']
+        .forEach(k => {
+          if(p[k]){ const i=document.createElement('input'); i.type='hidden'; i.name=k; i.value=p[k]; f.appendChild(i); }
+        });
+
+      const add = (n,v)=>{ if(v){ const i=document.createElement('input'); i.type='hidden'; i.name=n; i.value=v; f.appendChild(i); } };
+      add('card_number', card_number.replace(/\s|-/g,''));
+      add('expiry_date', expiry_date);
+      add('card_security_code', cvv);
+      add('card_holder_name', holder);
+      add('remember_me', remember_me);
+
+      document.body.appendChild(f);
+
+      console.log('APS URL:', gatewayUrl);
+      console.table([...new FormData(f).entries()]);
+
+      okBox.textContent = 'تحويل إلى APS ...';
+      okBox.style.display='block';
+      f.submit();
+    });
+  </script>
+</body>
+</html>
