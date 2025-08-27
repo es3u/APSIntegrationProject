@@ -1,0 +1,251 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<api context="/aps" name="APSAPI" xmlns="http://ws.apache.org/ns/synapse">
+
+  <!-- =================== 1) تحضير التوكن =================== -->
+  <resource methods="POST OPTIONS" uri-template="/prepare-token">
+    <inSequence>
+      <!-- CORS -->
+            <property name="Access-Control-Allow-Origin" scope="transport" type="STRING" value="*"/>
+            <property name="Access-Control-Allow-Methods" scope="transport" type="STRING" value="GET, POST, OPTIONS"/>
+            <property name="Access-Control-Allow-Headers" scope="transport" type="STRING" value="Content-Type, Authorization, X-Requested-With, Origin, Accept"/>
+            <property name="Access-Control-Max-Age" scope="transport" type="STRING" value="86400"/>
+      <filter source="$axis2:HTTP_METHOD" regex="OPTIONS">
+        <then>
+                    <property name="HTTP_SC" scope="axis2" type="STRING" value="200"/>
+                    <respond/>
+                </then>
+            </filter>
+
+      <!--(Sandbox) -->
+            <property name="access_code" scope="default" type="STRING" value="SZUokabQCarzL6D9e4mT"/>
+            <property name="merchant_identifier" scope="default" type="STRING" value="HPEpXRQn"/>
+            <property name="sha_request_phrase" scope="default" type="STRING" value="54LdvuI4bpMaq1/3dv8M.x_$"/>
+            <property name="return_url" scope="default" type="STRING" value="https://localhost:8290/aps/token-callback"/>
+      <!-- APS HTTPS -->
+            <property name="gateway_url" scope="default" type="STRING" value="https://sbcheckout.payfort.com/FortAPI/paymentPage"/>
+
+       
+            <property name="merchant_reference" scope="default" type="STRING" expression="json-eval($.merchant_reference)"/>
+            <property name="language" scope="default" type="STRING" expression="json-eval($.language)"/>
+
+      <script language="js"><![CDATA[
+        var lang = mc.getProperty('language');
+        if (!lang || String(lang).trim()==='') mc.setProperty('language','en');
+      ]]></script>
+
+      <!--TOKENIZATION -->
+      <script language="js"><![CDATA[
+        var MessageDigest = Java.type('java.security.MessageDigest');
+        var Formatter = Java.type('java.util.Formatter');
+        var TreeMap = Java.type('java.util.TreeMap');
+        function hex(bytes){ var f=new Formatter(); for (var i=0;i<bytes.length;i++) f.format("%02x",(bytes[i]&0xff)); var s=f.toString(); f.close(); return s; }
+
+        var params=new TreeMap();
+        params.put('access_code', mc.getProperty('access_code'));
+        params.put('language', mc.getProperty('language')||'en');
+        params.put('merchant_identifier', mc.getProperty('merchant_identifier'));
+        params.put('merchant_reference', mc.getProperty('merchant_reference'));
+        params.put('return_url', mc.getProperty('return_url'));
+        params.put('service_command','TOKENIZATION');
+
+        var sb=new java.lang.StringBuilder();
+        sb.append('SHARequestPhrase=').append(mc.getProperty('sha_request_phrase'));
+        var it=params.entrySet().iterator();
+        while(it.hasNext()){
+          var e=it.next(); sb.append('&').append(e.getKey()).append('=');
+          if(e.getValue()!=null) sb.append(e.getValue());
+        }
+        sb.append('&SHARequestPhrase=').append(mc.getProperty('sha_request_phrase'));
+
+        var signature=hex(MessageDigest.getInstance('SHA-256').digest(String(sb.toString()).getBytes('UTF-8')));
+        params.put('signature',signature);
+
+        var paramsObj={}; var it2=params.entrySet().iterator();
+        while(it2.hasNext()){
+          var e2=it2.next(); paramsObj[e2.getKey()]=(e2.getValue()==null)? "" : String(e2.getValue());
+        }
+
+        mc.setPayloadJSON({ gateway_url:String(mc.getProperty('gateway_url')), params:paramsObj });
+      ]]></script>
+            <property name="messageType" scope="axis2" type="STRING" value="application/json"/>
+            <respond/>
+        </inSequence>
+    </resource>
+
+  <!--  2) الكول باك للتحقق  -->
+    <resource methods="GET" protocol="https" uri-template="/token-callback">
+        <inSequence>
+            <property name="sha_response_phrase" scope="default" type="STRING" value="15/UErLKeX/uqhfugPbvNz)-"/>
+          
+            <property name="status" scope="default" type="STRING" expression="$url:status"/>
+            <property name="response_code" scope="default" type="STRING" expression="$url:response_code"/>
+            <property name="response_message" scope="default" type="STRING" expression="$url:response_message"/>
+            <property name="merchant_reference" scope="default" type="STRING" expression="$url:merchant_reference"/>
+            <property name="access_code" scope="default" type="STRING" expression="$url:access_code"/>
+            <property name="merchant_identifier" scope="default" type="STRING" expression="$url:merchant_identifier"/>
+            <property name="language" scope="default" type="STRING" expression="$url:language"/>
+            <property name="token_name" scope="default" type="STRING" expression="$url:token_name"/>
+            <property name="card_number" scope="default" type="STRING" expression="$url:card_number"/>
+            <property name="expiry_date" scope="default" type="STRING" expression="$url:expiry_date"/>
+            <property name="card_holder_name" scope="default" type="STRING" expression="$url:card_holder_name"/>
+            <property name="remember_me" scope="default" type="STRING" expression="$url:remember_me"/>
+            <property name="signature" scope="default" type="STRING" expression="$url:signature"/>
+          
+            <script language="js"><![CDATA[
+        function S(v){ return (v == null) ? "" : String(v).trim(); }
+        var keys=["access_code","card_holder_name","card_number","expiry_date","language","merchant_identifier","merchant_reference","remember_me","response_code","response_message","status","token_name","signature","sha_response_phrase"];
+        for (var i = 0; i < keys.length; i++){ var k = keys[i]; mc.setProperty(k, S(mc.getProperty(k))); }
+      ]]></script>
+            <!---->
+            <script language="js"><![CDATA[
+        var MessageDigest=Java.type('java.security.MessageDigest');
+        var Formatter=Java.type('java.util.Formatter');
+        var TreeMap=Java.type('java.util.TreeMap');
+        function hex(bytes){ var f=new Formatter(); for (var i=0;i<bytes.length;i++) f.format("%02x",(bytes[i]&0xff)); var s=f.toString(); f.close(); return s; }
+        function S(v){ return (v==null) ? "" : String(v); }
+
+        var shaResp=S(mc.getProperty("sha_response_phrase"));
+        var keys=["access_code","card_holder_name","card_number","expiry_date","language","merchant_identifier","merchant_reference","remember_me","response_code","response_message","status","token_name"];
+        var params=new TreeMap();
+        for (var i=0;i<keys.length;i++){
+          var k=keys[i], v=S(mc.getProperty(k)); if (v.length>0) params.put(k,v);
+        }
+        var sb=new java.lang.StringBuilder();
+        sb.append("SHAResponsePhrase=").append(shaResp);
+        var it=params.entrySet().iterator();
+        while (it.hasNext()){ var e=it.next(); sb.append("&").append(e.getKey()).append("=").append(S(e.getValue())); }
+        sb.append("&SHAResponsePhrase=").append(shaResp);
+        var expected=hex(MessageDigest.getInstance("SHA-256").digest(String(sb.toString()).getBytes("UTF-8")));
+        var received=S(mc.getProperty("signature"));
+        var sigOK=expected.toLowerCase()===received.toLowerCase();
+
+        mc.setPayloadJSON({
+          signature_ok:sigOK,
+          status:S(mc.getProperty("status")),
+          response_code:S(mc.getProperty("response_code")),
+          response_message:S(mc.getProperty("response_message")),
+          merchant_reference:S(mc.getProperty("merchant_reference")),
+          token_name:S(mc.getProperty("token_name")),
+          masked_card:S(mc.getProperty("card_number")),
+          expiry_date:S(mc.getProperty("expiry_date")),
+          remember_me:S(mc.getProperty("remember_me"))
+        });
+      ]]></script>
+            <property name="messageType" scope="axis2" type="STRING" value="application/json"/>
+            <respond/>
+        </inSequence>
+    </resource>
+    <!-- =================== 3)PURCHASE =================== -->
+    <resource methods="POST OPTIONS" uri-template="/payment-api">
+        <inSequence>
+            <!-- CORS -->
+      <property name="Access-Control-Allow-Origin" scope="transport" type="STRING" value="*"/>
+      <property name="Access-Control-Allow-Methods" scope="transport" type="STRING" value="GET, POST, OPTIONS"/>
+      <property name="Access-Control-Allow-Headers" scope="transport" type="STRING" value="Content-Type, Authorization, X-Requested-With, Origin, Accept"/>
+      <property name="Access-Control-Max-Age" scope="transport" type="STRING" value="86400"/>
+      <filter source="$axis2:HTTP_METHOD" regex="OPTIONS">
+        <then>
+          <property name="HTTP_SC" scope="axis2" type="STRING" value="200"/>
+          <respond/>
+                </then>
+            </filter>
+            <!---->
+      <property name="access_code" scope="default" type="STRING" value="SZUokabQCarzL6D9e4mT"/>
+      <property name="merchant_identifier" scope="default" type="STRING" value="HPEpXRQn"/>
+      <property name="sha_request_phrase" scope="default" type="STRING" value="54LdvuI4bpMaq1/3dv8M.x_$"/>
+      <property name="sha_response_phrase" scope="default" type="STRING" value="15/UErLKeX/uqhfugPbvNz)-"/>
+            <!---->
+      <property name="merchant_reference" scope="default" type="STRING" expression="json-eval($.merchant_reference)"/>
+      <property name="amount" scope="default" type="STRING" expression="json-eval($.amount)"/>
+      <property name="currency" scope="default" type="STRING" expression="json-eval($.currency)"/>
+      <property name="language" scope="default" type="STRING" expression="json-eval($.language)"/>
+      <property name="customer_email" scope="default" type="STRING" expression="json-eval($.customer_email)"/>
+      <property name="token_name" scope="default" type="STRING" expression="json-eval($.token_name)"/>
+            <!--  -->
+      <script language="js"><![CDATA[
+        var MessageDigest=Java.type('java.security.MessageDigest');
+        var Formatter=Java.type('java.util.Formatter');
+        var TreeMap=Java.type('java.util.TreeMap');
+        function hex(bytes){ var f=new Formatter(); for (var i=0;i<bytes.length;i++) f.format("%02x",(bytes[i]&0xff)); var s=f.toString(); f.close(); return s; }
+        function S(v){ return (v==null) ? "" : String(v).trim(); }
+
+        var params=new TreeMap();
+        params.put('access_code', S(mc.getProperty('access_code')));
+        params.put('amount', S(mc.getProperty('amount')));
+        params.put('command', 'PURCHASE');
+        params.put('currency', S(mc.getProperty('currency')));
+        params.put('customer_email', S(mc.getProperty('customer_email')));
+        params.put('language', S(mc.getProperty('language')) || 'en');
+        params.put('merchant_identifier', S(mc.getProperty('merchant_identifier')));
+        params.put('merchant_reference', S(mc.getProperty('merchant_reference')));
+        params.put('token_name', S(mc.getProperty('token_name')));
+
+        var sb=new java.lang.StringBuilder();
+        sb.append('SHARequestPhrase=').append(S(mc.getProperty('sha_request_phrase')));
+        var it=params.entrySet().iterator();
+        while (it.hasNext()){
+          var e=it.next();
+          sb.append('&').append(e.getKey()).append('=').append(S(e.getValue()));
+        }
+        sb.append('&SHARequestPhrase=').append(S(mc.getProperty('sha_request_phrase')));
+
+        var signature=hex(MessageDigest.getInstance('SHA-256').digest(String(sb.toString()).getBytes('UTF-8')));
+        params.put('signature', signature);
+
+        var o={}; var it2=params.entrySet().iterator();
+        while (it2.hasNext()){
+          var e2=it2.next(); o[String(e2.getKey())]=String(e2.getValue());
+        }
+        mc.setProperty('purchase_json', JSON.stringify(o));
+      ]]></script>
+            <!-- -->
+      <header name="Content-Type" scope="transport" value="application/json"/>
+      <property name="HTTP_METHOD" scope="axis2" type="STRING" value="POST"/>
+      <payloadFactory media-type="json">
+        <format>$1</format>
+        <args>
+          <arg evaluator="xml" expression="get-property('purchase_json')"/>
+                </args>
+            </payloadFactory>
+      <call>
+        <endpoint>
+          <http method="POST" uri-template="https://sbcheckout.payfort.com/FortAPI/paymentApi"/>
+                </endpoint>
+            </call>
+            <!-- -->
+      <script language="js"><![CDATA[
+        var MessageDigest=Java.type('java.security.MessageDigest');
+        var Formatter=Java.type('java.util.Formatter');
+        var TreeMap=Java.type('java.util.TreeMap');
+        function hex(bytes){ var f=new Formatter(); for (var i=0;i<bytes.length;i++) f.format("%02x",(bytes[i]&0xff)); var s=f.toString(); f.close(); return s; }
+        function S(v){ return (v==null) ? "" : String(v); }
+
+        var resp = mc.getPayloadJSON();
+        var params=new TreeMap();
+        for (var k in resp){
+          if (!resp.hasOwnProperty(k)) continue;
+          if (k === 'signature') continue;
+          var v = resp[k];
+          if (v!==null && String(v).length>0) params.put(k, String(v));
+        }
+
+        var shaResp = String(mc.getProperty('sha_response_phrase'));
+        var sb=new java.lang.StringBuilder();
+        sb.append("SHAResponsePhrase=").append(shaResp);
+        var it=params.entrySet().iterator();
+        while (it.hasNext()){
+          var e=it.next();
+          sb.append("&").append(e.getKey()).append("=").append(S(e.getValue()));
+        }
+        sb.append("&SHAResponsePhrase=").append(shaResp);
+        var expected=hex(MessageDigest.getInstance("SHA-256").digest(String(sb.toString()).getBytes("UTF-8")));
+        var received=S(resp['signature']);
+        resp['signature_ok']=(expected.toLowerCase()===received.toLowerCase());
+        mc.setPayloadJSON(resp);
+      ]]></script>
+
+      <property name="messageType" scope="axis2" type="STRING" value="application/json"/>
+      <respond/>
+        </inSequence>
+    </resource>
+</api>

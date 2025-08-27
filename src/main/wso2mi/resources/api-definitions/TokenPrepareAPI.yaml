@@ -1,0 +1,8 @@
+openapi: 3.0.1
+info:
+  title: TokenPrepareAPI
+  description: API Definition of TokenPrepareAPI
+  version: 1.0.0
+servers:
+- url: http://localhost:8290/aps
+paths: {}
