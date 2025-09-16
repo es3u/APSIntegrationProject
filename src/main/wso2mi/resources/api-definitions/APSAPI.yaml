@@ -6,7 +6,7 @@ info:
 servers:
 - url: http://localhost:8290/aps
 paths:
-  /prepare-token:
+  /register-user:
     post:
       requestBody:
         description: Sample Payload
@@ -26,7 +26,23 @@ paths:
       responses:
         default:
           description: Default response
-    options:
+  /prepare-token:
+    post:
+      requestBody:
+        description: Sample Payload
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                payload:
+                  type: object
+          application/xml:
+            schema:
+              type: object
+              xml:
+                name: payload
+        required: false
       responses:
         default:
           description: Default response
@@ -74,7 +90,43 @@ paths:
       responses:
         default:
           description: Default response
-    options:
+  /payment-existing:
+    post:
+      requestBody:
+        description: Sample Payload
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                payload:
+                  type: object
+          application/xml:
+            schema:
+              type: object
+              xml:
+                name: payload
+        required: false
+      responses:
+        default:
+          description: Default response
+  /refund:
+    post:
+      requestBody:
+        description: Sample Payload
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                payload:
+                  type: object
+          application/xml:
+            schema:
+              type: object
+              xml:
+                name: payload
+        required: false
       responses:
         default:
           description: Default response

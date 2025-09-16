@@ -1,0 +1,11 @@
+<datasource>
+    <name>DB_APS</name>
+    <definition type="RDBMS">
+        <configuration>
+            <driverClassName>com.mysql.cj.jdbc.Driver</driverClassName>
+            <url>jdbc:mysql://localhost:3306/APS_DB</url>
+            <username>Essa</username>
+            <password>Essa</password>
+        </configuration>
+    </definition>
+</datasource>
