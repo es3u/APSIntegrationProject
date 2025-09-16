@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Checkout | APS — Tokenization (HPP) + Auto Purchase</title>
+  <style>
+    :root{ --gap:12px; --gap-lg:16px; }
+    body{ margin:0; font-family:system-ui,-apple-system,"Segoe UI",Roboto; background:#0f172a; color:#e2e8f0; display:grid; place-items:center; min-height:100vh; }
+    .wrap{ width:min(780px, 96vw); background:#111827; padding:24px; border-radius:16px; box-shadow:0 10px 30px rgba(0,0,0,.35); }
+    h1{ margin:0 0 var(--gap); font-size:20px }
+    .muted{ color:#94a3b8 }
+    label{ display:block; font-size:13px; color:#94a3b8; margin-bottom:6px }
+    input,select{ width:100%; padding:10px 12px; border-radius:10px; border:1px solid #334155; background:#0b1220; color:#e2e8f0 }
+    button{ margin-top:12px; width:100%; padding:12px 14px; border-radius:10px; background:#2563eb; color:#fff; border:0; cursor:pointer; font-weight:600 }
+    .row{ display:grid; gap:var(--gap); grid-template-columns:1fr 1fr }
+    .row3{ display:grid; gap:var(--gap); grid-template-columns:1fr 1fr 1fr }
+    .err,.ok{ margin-top:12px; padding:10px 12px; border-radius:10px; display:none; font-size:13px }
+    .err{ background:#7f1d1d; color:#fecaca }
+    .ok{ background:#0b3d17; color:#c7f9cc }
+    pre{ background:#0b1020; color:#d1d5db; padding:10px; border-radius:10px; overflow:auto }
+    hr{ margin:18px 0; border:0; border-top:1px solid #334155 }
+    .actions{ display:flex; align-items:end; gap:var(--gap); }
+    .hint{ font-size:12px; color:#94a3b8; margin-top:8px }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>First Purchase (Tokenization + Auto Purchase)</h1>
+    <p class="muted">We send card data directly to APS to generate <code>token_name</code>. Your server will automatically complete the purchase on callback.</p>
+
+    <div class="row" style="margin-top:var(--gap-lg)">
+      <div>
+        <label>Email</label>
+        <input id="email" placeholder="example@site.com" />
+      </div>
+      <div>
+        <label>Merchant Reference</label>
+        <input id="mref" placeholder="ORD-{{timestamp}}" />
+      </div>
+    </div>
+
+    <div class="row">
+      <div>
+        <label>Amount</label>
+        <input id="amount" type="number" step="0.01" min="0" placeholder="100.00" />
+      </div>
+      <div>
+        <label>Currency</label>
+        <select id="currency">
+          <option value="SAR">SAR</option>
+          <option value="AED">AED</option>
+          <option value="USD">USD</option>
+          <option value="JOD">JOD</option>
+          <option value="KWD">KWD</option>
+          <option value="BHD">BHD</option>
+          <option value="OMR">OMR</option>
+          <option value="TND">TND</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="row">
+      <div>
+        <label>Language</label>
+        <select id="language">
+          <option value="en">English</option>
+          <option value="ar">Arabic</option>
+        </select>
+      </div>
+      <div class="actions">
+        <button id="gen" type="button">Generate Reference</button>
+        <button id="pay" type="button">Pay Now</button>
+      </div>
+    </div>
+
+    <hr />
+
+    <h3>Card Details</h3>
+    <div class="row">
+      <div>
+        <label>Card Number</label>
+        <input id="card_number" inputmode="numeric" autocomplete="cc-number" placeholder="4111111111111111" />
+      </div>
+      <div>
+        <label>Cardholder Name (optional)</label>
+        <input id="card_holder_name" autocomplete="cc-name" placeholder="Name on card" />
+      </div>
+    </div>
+
+    <div class="row3">
+      <div>
+        <label>Expiry Month (MM)</label>
+        <input id="exp_mm" inputmode="numeric" maxlength="2" placeholder="MM" />
+      </div>
+      <div>
+        <label>Expiry Year (YY)</label>
+        <input id="exp_yy" inputmode="numeric" maxlength="2" placeholder="YY" />
+      </div>
+      <div>
+        <label>CVV</label>
+        <input id="cvv" inputmode="numeric" maxlength="4" placeholder="CVV" />
+      </div>
+    </div>
+
+    <label style="display:flex; gap:8px; align-items:center; margin-top:8px">
+      <input id="remember_me" type="checkbox" /> Remember this card for later use
+    </label>
+    <div class="hint">A new window will open for tokenization. The server will finalize the payment after APS redirects to <code>/aps/token-callback</code>.</div>
+
+    <div id="ok" class="ok"></div>
+    <div id="err" class="err"></div>
+
+  
+
+  </div>
+
+<script>
+const $ = (id)=>document.getElementById(id);
+
+function decimalsForCurrency(c){
+  c = (c||"").toUpperCase();
+  const three = new Set(["JOD","KWD","BHD","OMR","TND","LYD","IQD"]);
+  return three.has(c) ? 3 : 2;
+}
+function toMinor(amountStr, currency){
+  const d = decimalsForCurrency(currency);
+  const val = Number(amountStr);
+  if(!isFinite(val) || val < 0) return null;
+  const factor = Math.pow(10, d);
+  return Math.round(val * factor);
+}
+function sanitizeDigits(s){ return String(s||"").replace(/\D+/g,""); }
+
+window.addEventListener('load',()=>{
+  const email = localStorage.getItem('APS_EMAIL');
+  if(email) $('email').value = email;
+});
+$('gen').onclick = ()=>{ $('mref').value = 'ORD-'+Date.now(); };
+
+// Optional: receive APS_CALLBACK if your callback page posts it.
+// We do NOT trigger another purchase here to avoid double charging.
+window.addEventListener('message',(ev)=>{
+  try{
+    const payload = ev.data && ev.data.type==='APS_CALLBACK' ? ev.data.data : null;
+    if(!payload) return;
+    $('result').textContent = JSON.stringify(payload, null, 2);
+    if(payload.signature_ok && payload.token_name){
+      localStorage.setItem('APS_TOKEN', payload.token_name);
+      showOk('Token saved. The server is completing your purchase in the opened window.');
+    }else{
+      showErr('Tokenization failed or signature mismatch.');
+    }
+  }catch(_){}
+});
+
+function showOk(t){ const el=$('ok'); el.textContent=t; el.style.display='block'; $('err').style.display='none'; }
+function showErr(t){ const el=$('err'); el.textContent=t; el.style.display='block'; $('ok').style.display='none'; }
+
+document.getElementById('pay').addEventListener('click', async ()=>{
+  const email = $('email').value.trim();
+  const amount = $('amount').value.trim();
+  const currency = $('currency').value;
+  const language = $('language').value || 'en';
+  const merchant_reference = $('mref').value.trim() || ('ORD-'+Date.now());
+
+  const card_number = sanitizeDigits($('card_number').value);
+  const exp_mm = sanitizeDigits($('exp_mm').value).padStart(2,'0').slice(-2);
+  const exp_yy = sanitizeDigits($('exp_yy').value).padStart(2,'0').slice(-2);
+  const expiry_date = exp_yy + exp_mm; // YYMM per APS
+  const card_security_code = sanitizeDigits($('cvv').value);
+  const card_holder_name = $('card_holder_name').value.trim();
+  const remember_me = $('remember_me').checked ? 'YES' : 'NO';
+
+  $('ok').style.display=$('err').style.display='none';
+
+  if(!email){ showErr('Email is required'); return; }
+  if(!card_number || !expiry_date || !card_security_code){ showErr('Complete card details'); return; }
+  localStorage.setItem('APS_EMAIL', email);
+
+  const minor = toMinor(amount, currency);
+  if(minor===null){ showErr('Enter a valid amount'); return; }
+
+  // 1) Ask the server for HPP params (amount/currency are stored server-side for the reference)
+  let prep;
+  try{
+    const res = await fetch("http://localhost:8290/aps/prepare-token", {
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify({
+        merchant_reference,
+        language,
+        amount: String(minor),
+        currency,
+        customer_email: email
+      })
+    });
+    prep = await res.json();
+    if(!res.ok || !prep || !prep.gateway_url || !prep.params || !prep.params.signature){
+      showErr('Unexpected server response'); console.error(prep); return;
+    }
+  }catch(ex){ showErr('Network error: '+ex.message); return; }
+
+  // 2) Post card directly to APS (opens a new tab/window)
+  const f = document.createElement('form');
+  f.method = 'POST';
+  f.action = prep.gateway_url;
+  f.target = '_blank';
+  f.acceptCharset = 'UTF-8';
+
+  // Signed params from server
+  for(const [k,v] of Object.entries(prep.params)){
+    if(v==null || v==='') continue;
+    const i=document.createElement('input');
+    i.type='hidden'; i.name=k; i.value=String(v);
+    f.appendChild(i);
+  }
+  // Card fields (not part of signature)
+  const add=(k,v)=>{ const i=document.createElement('input'); i.type='hidden'; i.name=k; i.value=v; f.appendChild(i); };
+  add('card_number', card_number);
+  add('expiry_date', expiry_date); // YYMM
+  add('card_security_code', card_security_code);
+  if(card_holder_name) add('card_holder_name', card_holder_name);
+  if(remember_me==='YES') add('remember_me', 'YES');
+
+  document.body.appendChild(f);
+  showOk('Submitting to APS for tokenization...');
+  f.submit();
+});
+</script>
+</body>
+</html>

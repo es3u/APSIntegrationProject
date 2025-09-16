@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Refund | APS</title>
+  <style>
+    :root{ --gap:12px; }
+    body{ margin:0; font-family:system-ui,-apple-system,"Segoe UI",Roboto; background:#0f172a; color:#e2e8f0; display:grid; place-items:center; min-height:100vh; }
+    .wrap{ width:min(720px, 94vw); background:#111827; padding:24px; border-radius:16px; box-shadow:0 10px 30px rgba(0,0,0,.35); }
+    h1{ margin:0 0 12px; font-size:20px }
+    label{ display:block; font-size:13px; color:#94a3b8; margin-bottom:6px }
+    input,select{ width:100%; padding:10px 12px; border-radius:10px; border:1px solid #334155; background:#0b1220; color:#e2e8f0 }
+    button{ margin-top:12px; width:100%; padding:12px 14px; border-radius:10px; background:#2563eb; color:#fff; border:0; cursor:pointer; font-weight:600 }
+    .row{ display:grid; gap:var(--gap); grid-template-columns:1fr 1fr }
+    .err,.ok{ margin-top:12px; padding:10px 12px; border-radius:10px; display:none; font-size:13px }
+    .err{ background:#7f1d1d; color:#fecaca }
+    .ok{ background:#0b3d17; color:#c7f9cc }
+    pre{ background:#0b1020; color:#d1d5db; padding:10px; border-radius:10px; overflow:auto }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Refund</h1>
+    <div class="row">
+      <div>
+        <label>Merchant Reference</label>
+        <input id="mref" placeholder="ORD-..." />
+      </div>
+      <div>
+        <label>Language</label>
+        <select id="language">
+          <option value="en">English</option>
+          <option value="ar">Arabic</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="row">
+      <div>
+        <label>Amount</label>
+        <input id="amount" type="number" step="0.01" min="0" placeholder="10.00" />
+      </div>
+      <div>
+        <label>Currency</label>
+        <select id="currency">
+          <option value="SAR">SAR</option>
+          <option value="AED">AED</option>
+          <option value="USD">USD</option>
+          <option value="JOD">JOD</option>
+          <option value="KWD">KWD</option>
+          <option value="BHD">BHD</option>
+          <option value="OMR">OMR</option>
+          <option value="TND">TND</option>
+        </select>
+      </div>
+    </div>
+
+    <button id="refund">Process Refund</button>
+
+    <div id="ok" class="ok"></div>
+    <div id="err" class="err"></div>
+
+  
+  </div>
+
+<script>
+const $ = (id)=>document.getElementById(id);
+
+function decimalsForCurrency(c){
+  c = (c||"").toUpperCase();
+  const three = new Set(["JOD","KWD","BHD","OMR","TND","LYD","IQD"]);
+  return three.has(c) ? 3 : 2;
+}
+function toMinor(amountStr, currency){
+  const d = decimalsForCurrency(currency);
+  const val = Number(amountStr);
+  if(!isFinite(val) || val < 0) return null;
+  const factor = Math.pow(10, d);
+  return Math.round(val * factor);
+}
+
+document.getElementById('refund').addEventListener('click', async ()=>{
+  const merchant_reference = $('mref').value.trim();
+  const amount = $('amount').value.trim();
+  const currency = $('currency').value;
+  const language = $('language').value || 'en';
+  const okBox = $('ok'), errBox = $('err');
+  okBox.style.display=errBox.style.display='none'; okBox.textContent=errBox.textContent='';
+
+  if(!merchant_reference){ errBox.textContent='Enter merchant reference'; errBox.style.display='block'; return; }
+  const minor = toMinor(amount, currency);
+  if(minor===null){ errBox.textContent='Enter a valid amount'; errBox.style.display='block'; return; }
+
+  try{
+    const res = await fetch('http://localhost:8290/aps/refund', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ merchant_reference, amount:String(minor), currency, language })
+    });
+    const j = await res.json();
+    document.getElementById('result').textContent = JSON.stringify(j, null, 2);
+    if(j && (j.status==='14' || (j.response_code||'').startsWith('20'))){
+      okBox.textContent='Refund completed ✅'; okBox.style.display='block';
+    }else{
+      errBox.textContent='Refund failed ❌'; errBox.style.display='block';
+    }
+  }catch(ex){
+    errBox.textContent='Network error: '+ex.message; errBox.style.display='block';
+  }
+});
+</script>
+</body>
+</html>
