@@ -113,51 +113,56 @@
   <!-- ========================= 3) TOKEN CALLBACK (from Merchant Page) ========================= -->
   <resource methods="GET POST" uri-template="/token-callback">
     <inSequence>
-      <property name="sha_response_phrase" scope="default" type="STRING" value="15/UErLKeX/uqhfugPbvNz)-"/>
+            <property name="sha_response_phrase" scope="default" type="STRING" value="15/UErLKeX/uqhfugPbvNz)-"/>
 
       <!-- Collect URL params -->
-      <property name="status"              scope="default" type="STRING" expression="$url:status"/>
-      <property name="response_code"       scope="default" type="STRING" expression="$url:response_code"/>
-      <property name="response_message"    scope="default" type="STRING" expression="$url:response_message"/>
-      <property name="merchant_reference"  scope="default" type="STRING" expression="$url:merchant_reference"/>
-      <property name="access_code"         scope="default" type="STRING" expression="$url:access_code"/>
-      <property name="merchant_identifier" scope="default" type="STRING" expression="$url:merchant_identifier"/>
-      <property name="language"            scope="default" type="STRING" expression="$url:language"/>
-      <property name="token_name"          scope="default" type="STRING" expression="$url:token_name"/>
-      <property name="signature"           scope="default" type="STRING" expression="$url:signature"/>
-      <property name="fort_id"             scope="default" type="STRING" expression="$url:fort_id"/>
-      <property name="service_command"     scope="default" type="STRING" expression="$url:service_command"/>
-      <property name="return_url"          scope="default" type="STRING" expression="$url:return_url"/>
-      <property name="remember_me"         scope="default" type="STRING" expression="$url:remember_me"/>
-      <property name="card_bin"            scope="default" type="STRING" expression="$url:card_bin"/>
-      <property name="card_number"         scope="default" type="STRING" expression="$url:card_number"/>
-      <property name="card_holder_name"    scope="default" type="STRING" expression="$url:card_holder_name"/>
-      <property name="expiry_date"         scope="default" type="STRING" expression="$url:expiry_date"/>
+            <property name="status" scope="default" type="STRING" expression="$url:status"/>
+            <property name="response_code" scope="default" type="STRING" expression="$url:response_code"/>
+            <property name="response_message" scope="default" type="STRING" expression="$url:response_message"/>
+            <property name="merchant_reference" scope="default" type="STRING" expression="$url:merchant_reference"/>
+            <property name="access_code" scope="default" type="STRING" expression="$url:access_code"/>
+            <property name="merchant_identifier" scope="default" type="STRING" expression="$url:merchant_identifier"/>
+            <property name="language" scope="default" type="STRING" expression="$url:language"/>
+            <property name="token_name" scope="default" type="STRING" expression="$url:token_name"/>
+            <property name="signature" scope="default" type="STRING" expression="$url:signature"/>
+            <property name="fort_id" scope="default" type="STRING" expression="$url:fort_id"/>
+            <property name="service_command" scope="default" type="STRING" expression="$url:service_command"/>
+            <property name="return_url" scope="default" type="STRING" expression="$url:return_url"/>
+            <property name="remember_me" scope="default" type="STRING" expression="$url:remember_me"/>
+            <property name="card_bin" scope="default" type="STRING" expression="$url:card_bin"/>
+            <property name="card_number" scope="default" type="STRING" expression="$url:card_number"/>
+            <property name="card_holder_name" scope="default" type="STRING" expression="$url:card_holder_name"/>
+            <property name="expiry_date" scope="default" type="STRING" expression="$url:expiry_date" description="log1"/>
 
-      <!-- Override by POST if present -->
+     <log category="INFO" logMessageID="false" logFullPayload="false">
+                <message>${properties.synapse.status}</message>
+            </log>
+            <!-- Override by POST if present -->
       <filter source="$axis2:HTTP_METHOD" regex="POST">
         <then>
-          <property name="status"              scope="default" type="STRING" expression="$body//status/text()"/>
-          <property name="response_code"       scope="default" type="STRING" expression="$body//response_code/text()"/>
-          <property name="response_message"    scope="default" type="STRING" expression="$body//response_message/text()"/>
-          <property name="merchant_reference"  scope="default" type="STRING" expression="$body//merchant_reference/text()"/>
-          <property name="access_code"         scope="default" type="STRING" expression="$body//access_code/text()"/>
-          <property name="merchant_identifier" scope="default" type="STRING" expression="$body//merchant_identifier/text()"/>
-          <property name="language"            scope="default" type="STRING" expression="$body//language/text()"/>
-          <property name="token_name"          scope="default" type="STRING" expression="$body//token_name/text()"/>
-          <property name="signature"           scope="default" type="STRING" expression="$body//signature/text()"/>
-          <property name="fort_id"             scope="default" type="STRING" expression="$body//fort_id/text()"/>
-          <property name="service_command"     scope="default" type="STRING" expression="$body//service_command/text()"/>
-          <property name="return_url"          scope="default" type="STRING" expression="$body//return_url/text()"/>
-          <property name="remember_me"         scope="default" type="STRING" expression="$body//remember_me/text()"/>
-          <property name="card_bin"            scope="default" type="STRING" expression="$body//card_bin/text()"/>
-          <property name="card_number"         scope="default" type="STRING" expression="$body//card_number/text()"/>
-          <property name="card_holder_name"    scope="default" type="STRING" expression="$body//card_holder_name/text()"/>
-          <property name="expiry_date"         scope="default" type="STRING" expression="$body//expiry_date/text()"/>
-        </then>
-      </filter>
-
-      <!-- Verify signature -->
+                    <property name="status" scope="default" type="STRING" expression="$body//status/text()"/>
+                    <property name="response_code" scope="default" type="STRING" expression="$body//response_code/text()"/>
+                    <property name="response_message" scope="default" type="STRING" expression="$body//response_message/text()"/>
+                    <property name="merchant_reference" scope="default" type="STRING" expression="$body//merchant_reference/text()"/>
+                    <property name="access_code" scope="default" type="STRING" expression="$body//access_code/text()"/>
+                    <property name="merchant_identifier" scope="default" type="STRING" expression="$body//merchant_identifier/text()"/>
+                    <property name="language" scope="default" type="STRING" expression="$body//language/text()"/>
+                    <property name="token_name" scope="default" type="STRING" expression="$body//token_name/text()"/>
+                    <property name="signature" scope="default" type="STRING" expression="$body//signature/text()"/>
+                    <property name="fort_id" scope="default" type="STRING" expression="$body//fort_id/text()"/>
+                    <property name="service_command" scope="default" type="STRING" expression="$body//service_command/text()"/>
+                    <property name="return_url" scope="default" type="STRING" expression="$body//return_url/text()"/>
+                    <property name="remember_me" scope="default" type="STRING" expression="$body//remember_me/text()"/>
+                    <property name="card_bin" scope="default" type="STRING" expression="$body//card_bin/text()"/>
+                    <property name="card_number" scope="default" type="STRING" expression="$body//card_number/text()"/>
+                    <property name="card_holder_name" scope="default" type="STRING" expression="$body//card_holder_name/text()"/>
+                    <property name="expiry_date" scope="default" type="STRING" expression="$body//expiry_date/text()"/>
+                    <log level="custom" category="INFO">
+                        <property name="StatusValue" expression="get-property('status')"/>
+                    </log>
+                </then>
+            </filter>
+            <!-- Verify signature -->
       <script language="js"><![CDATA[
         var MD=Java.type('java.security.MessageDigest');
         var F=Java.type('java.util.Formatter');
@@ -193,7 +198,10 @@
         });
       ]]></script>
 
-      <!-- إذا التوقيع OK وtoken موجود: حدّث users.token_name ثم نادِ /payment-api -->
+      <log category="INFO" logMessageID="false" logFullPayload="true">
+                <message>new json</message>
+            </log>
+            <!-- إذا التوقيع OK وtoken موجود: حدّث users.token_name ثم نادِ /payment-api -->
       <filter source="json-eval($.signature_ok)" regex="true">
         <then>
           <filter source="json-eval($.token_name)" regex=".+">
@@ -205,20 +213,19 @@
                     <url>jdbc:mysql://localhost:3306/APS_DB?useSSL=false&amp;allowPublicKeyRetrieval=true&amp;serverTimezone=UTC</url>
                     <user>Essa</user>
                     <password>Essa</password>
-                  </pool>
-                </connection>
+                                    </pool>
+                                </connection>
                 <statement>
                   <sql>
-                    UPDATE users
-                       SET token_name = ?, updated_at = NOW()
-                     WHERE id = (SELECT user_id FROM purchases WHERE merchant_reference = ? LIMIT 1)
-                  </sql>
+                                        UPDATE users
+                                        SET token_name = ?, updated_at = NOW()
+                                        WHERE id = (SELECT user_id FROM purchases WHERE merchant_reference = ? LIMIT 1)
+                                    </sql>
                   <parameter expression="json-eval($.token_name)"         type="VARCHAR"/>
                   <parameter expression="json-eval($.merchant_reference)" type="VARCHAR"/>
-                </statement>
-              </dbreport>
-
-              <!-- اسحب amount/currency/email من DB لهذا المرجع -->
+                                </statement>
+                            </dbreport>
+                            <!-- اسحب amount/currency/email من DB لهذا المرجع -->
               <dblookup>
                 <connection>
                   <pool>
@@ -226,247 +233,240 @@
                     <url>jdbc:mysql://localhost:3306/APS_DB?useSSL=false&amp;allowPublicKeyRetrieval=true&amp;serverTimezone=UTC</url>
                     <user>Essa</user>
                     <password>Essa</password>
-                  </pool>
-                </connection>
+                                    </pool>
+                                </connection>
                 <statement>
                   <sql>
-                    SELECT p.amount_minor AS a_amount, p.currency AS a_currency, u.email AS a_email
-                    FROM purchases p JOIN users u ON u.id=p.user_id
-                    WHERE p.merchant_reference = ?
-                  </sql>
+                                        SELECT p.amount_minor AS a_amount, p.currency AS a_currency, u.email AS a_email
+                                        FROM purchases p JOIN users u ON u.id=p.user_id
+                                        WHERE p.merchant_reference = ?
+                                    </sql>
                   <parameter expression="json-eval($.merchant_reference)" type="VARCHAR"/>
                   <result name="a_amount"   column="a_amount"/>
                   <result name="a_currency" column="a_currency"/>
                   <result name="a_email"    column="a_email"/>
-                </statement>
-              </dblookup>
-
-              <!-- تمرير القيم كهيدرز احتياط + body form -->
-              <payloadFactory media-type="text">
-                <format>merchant_reference=$1&amp;amount=$2&amp;currency=$3&amp;language=$4&amp;token_name=$5&amp;customer_email=$6</format>
-                <args>
-                  <arg expression="get-property('merchant_reference')"/>
-                  <arg expression="get-property('a_amount')"/>
-                  <arg expression="get-property('a_currency')"/>
-                  <arg expression="get-property('language')"/>
-                  <arg evaluator="json" expression="$.token_name"/>
-                  <arg expression="get-property('a_email')"/>
-                </args>
-              </payloadFactory>
-              <header name="Content-Type"             scope="transport" value="application/x-www-form-urlencoded"/>
-              <header name="X-APS-Token-Name"         scope="transport" expression="json-eval($.token_name)"/>
-              <header name="X-APS-Merchant-Reference" scope="transport" expression="get-property('merchant_reference')"/>
-              <header name="X-APS-Amount"             scope="transport" expression="get-property('a_amount')"/>
-              <header name="X-APS-Currency"           scope="transport" expression="get-property('a_currency')"/>
-              <header name="X-APS-Language"           scope="transport" expression="get-property('language')"/>
-              <header name="X-APS-Customer-Email"     scope="transport" expression="get-property('a_email')"/>
+                                </statement>
+                            </dblookup>
+                            <!-- تمرير القيم كهيدرز احتياط + body form -->
+              <payloadFactory media-type="json">
+                  <format>{
+                    "merchant_reference":"$1",
+                    "amount":"$2",
+                    "currency":"$3",
+                    "language":"$4",
+                    "token_name":"$5",
+                    "customer_email":"$6"
+                  }</format>
+                  <args>
+                    <arg expression="get-property('merchant_reference')"/>
+                    <arg expression="get-property('a_amount')"/>
+                    <arg expression="get-property('a_currency')"/>
+                    <arg expression="get-property('language')"/>
+                    <arg evaluator="json" expression="$.token_name"/>
+                    <arg expression="get-property('a_email')"/>
+                  </args>
+                </payloadFactory>
+              <header name="Content-Type" scope="transport" value="application/json"/>
 
               <call>
-                <endpoint><http method="POST" uri-template="http://localhost:8290/aps/payment-api"/></endpoint>
-              </call>
-
-              <!-- حضّر رسالة مختصرة بناءً على رد الشراء -->
+                <endpoint><http method="POST" uri-template="http://localhost:8290/aps/payment-api"/>
+                                </endpoint>
+                            </call>
+                            <!-- حضّر رسالة مختصرة بناءً على رد الشراء -->
               <filter source="json-eval($.status)" regex="14">
-                <then><property name="result_msg" scope="default" type="STRING" value="تمت عملية الشراء بنجاح ✅"/></then>
-                <else><property name="result_msg" scope="default" type="STRING" value="فشلت عملية الشراء ❌"/></else>
-              </filter>
-            </then>
-          </filter>
-        </then>
-      </filter>
-
-      <!-- رجّع نصّ بسيط يدل على النتيجة -->
+                <then><property name="result_msg" scope="default" type="STRING" value="تمت عملية الشراء بنجاح ✅"/>
+                                </then>
+                <else><property name="result_msg" scope="default" type="STRING" value="فشلت عملية الشراء ❌"/>
+                                </else>
+                            </filter>
+                        </then>
+                    </filter>
+                </then>
+            </filter>
+            <!-- رجّع نصّ بسيط يدل على النتيجة -->
       <payloadFactory media-type="text">
         <format>$1</format>
         <args>
           <arg expression="get-property('result_msg')"/>
-        </args>
-      </payloadFactory>
+                </args>
+            </payloadFactory>
       <property name="messageType" scope="axis2" type="STRING" value="text/html"/>
       <respond/>
-    </inSequence>
+        </inSequence>
   </resource>
+<!-- ========================= 4) DIRECT PURCHASE WITH TOKEN ========================= -->
+<resource methods="POST" uri-template="/payment-api">
+  <inSequence>
 
-  <!-- ========================= 4) DIRECT PURCHASE WITH TOKEN ========================= -->
-  <resource methods="POST" uri-template="/payment-api">
-    <inSequence>
-      <property name="access_code"         scope="default" type="STRING" value="kJCjkMslRQUSzGDMUb58"/>
-      <property name="merchant_identifier" scope="default" type="STRING" value="HPEpXRQn"/>
-      <property name="sha_request_phrase"  scope="default" type="STRING" value="54LdvuI4bpMaq1/3dv8M.x_$"/>
-      <property name="sha_response_phrase" scope="default" type="STRING" value="15/UErLKeX/uqhfugPbvNz)-"/>
-
-      <property name="merchant_reference" scope="default" type="STRING" expression="json-eval($.merchant_reference)"/>
-      <property name="amount"             scope="default" type="STRING" expression="json-eval($.amount)"/>
-      <property name="currency"           scope="default" type="STRING" expression="json-eval($.currency)"/>
-      <property name="token_name"         scope="default" type="STRING" expression="json-eval($.token_name)"/>
-      <property name="customer_email"     scope="default" type="STRING" expression="json-eval($.customer_email)"/>
-      <property name="card_security_code" scope="default" type="STRING" expression="json-eval($.card_security_code)"/>
-
-      <!-- Fallback from headers (لنداء form/urlencoded) -->
-      <filter source="get-property('merchant_reference')" regex="^$"><then>
-        <property name="merchant_reference" scope="default" type="STRING" expression="$trp:X-APS-Merchant-Reference"/>
-      </then></filter>
-      <filter source="get-property('amount')" regex="^$"><then>
-        <property name="amount" scope="default" type="STRING" expression="$trp:X-APS-Amount"/>
-      </then></filter>
-      <filter source="get-property('currency')" regex="^$"><then>
-        <property name="currency" scope="default" type="STRING" expression="$trp:X-APS-Currency"/>
-      </then></filter>
-      <filter source="get-property('token_name')" regex="^$"><then>
-        <property name="token_name" scope="default" type="STRING" expression="$trp:X-APS-Token-Name"/>
-      </then></filter>
-      <filter source="get-property('customer_email')" regex="^$"><then>
-        <property name="customer_email" scope="default" type="STRING" expression="$trp:X-APS-Customer-Email"/>
-      </then></filter>
-      <filter source="get-property('language')" regex="^$"><then>
-        <property name="language" scope="default" type="STRING" expression="$trp:X-APS-Language"/>
-      </then></filter>
-      <filter source="get-property('card_security_code')" regex="^$"><then>
-        <property name="card_security_code" scope="default" type="STRING" expression="$trp:X-APS-CVV"/>
-      </then></filter>
-
-      <!-- Validation -->
-      <filter source="get-property('merchant_reference')" regex="^$"><then>
-        <payloadFactory media-type="json"><format>{"error":"merchant_reference is required"}</format></payloadFactory>
-        <property name="messageType" scope="axis2" type="STRING" value="application/json"/>
-        <respond/><drop/>
-      </then></filter>
-      <filter source="get-property('amount')" regex="^$|[^0-9]"><then>
-        <payloadFactory media-type="json"><format>{"error":"amount must be minor units"}</format></payloadFactory>
-        <property name="messageType" scope="axis2" type="STRING" value="application/json"/>
-        <respond/><drop/>
-      </then></filter>
-      <filter source="get-property('currency')" regex="^$"><then>
-        <payloadFactory media-type="json"><format>{"error":"currency is required"}</format></payloadFactory>
-        <property name="messageType" scope="axis2" type="STRING" value="application/json"/>
-        <respond/><drop/>
-      </then></filter>
-      <filter source="get-property('token_name')" regex="^$"><then>
-        <payloadFactory media-type="json"><format>{"error":"token_name is required"}</format></payloadFactory>
-        <property name="messageType" scope="axis2" type="STRING" value="application/json"/>
-        <respond/><drop/>
-      </then></filter>
-
-      <!-- Language fallback if missing -->
-      <filter source="get-property('language')" regex="^$"><then>
-        <property name="language" scope="default" type="STRING" value="en"/>
-      </then></filter>
-
-      <!-- Build APS purchase request -->
-      <script language="js"><![CDATA[
-        var MD=Java.type('java.security.MessageDigest');
-        var F=Java.type('java.util.Formatter');
-        var TM=Java.type('java.util.TreeMap');
-        function S(v){return v==null?"":String(v).trim();}
-        function hex(b){var f=new F();for(var i=0;i<b.length;i++)f.format('%02x',(b[i]&0xff));var s=f.toString();f.close();return s;}
-
-        var p=new TM();
-        p.put('access_code',         S(mc.getProperty('access_code')));
-        p.put('amount',              S(mc.getProperty('amount')));
-        p.put('command',             'PURCHASE');
-        p.put('currency',            S(mc.getProperty('currency')));
-        p.put('merchant_identifier', S(mc.getProperty('merchant_identifier')));
-        p.put('merchant_reference',  S(mc.getProperty('merchant_reference')));
-        p.put('token_name',          S(mc.getProperty('token_name')));
-        p.put('customer_email',      S(mc.getProperty('customer_email')));
-        var cvv = S(mc.getProperty('card_security_code'));
-        if (cvv.length>0) p.put('card_security_code', cvv);
-        p.put('return_url',          'http://localhost:8290/aps/token-callback');
-
-        var phrase=S(mc.getProperty('sha_request_phrase'));
-        var sb=new java.lang.StringBuilder(); sb.append(phrase);
-        var it=p.entrySet().iterator(); while(it.hasNext()){var e=it.next(); sb.append(e.getKey()).append('=').append(S(e.getValue()));}
-        sb.append(phrase);
-        p.put('signature', hex(MD.getInstance('SHA-256').digest(String(sb.toString()).getBytes('UTF-8'))));
-
-        var body={}; var it2=p.entrySet().iterator(); while(it2.hasNext()){var e2=it2.next(); body[String(e2.getKey())]=String(e2.getValue());}
-        mc.setPayloadJSON(body);
-      ]]></script>
-
-      <header name="Content-Type" scope="transport" value="application/json"/>
-      <call>
-        <endpoint><http method="POST" uri-template="https://sbpaymentservices.payfort.com/FortAPI/paymentApi"/></endpoint>
-      </call>
-<property name="HTTP_SC" scope="axis2" expression="$axis2:HTTP_SC"/>
-<property name="CT"      scope="transport" expression="$trp:Content-Type"/>
-
-<filter source="$trp:Content-Type" regex="(?i)application/json">
-  <then>
-  </then>
-  <else>
-    <log level="custom">
-      <property name="APS_NON_JSON" value="true"/>
-      <property name="HTTP_SC" expression="$axis2:HTTP_SC"/>
-      <property name="CT" expression="$trp:Content-Type"/>
+    <log category="INFO" logMessageID="false" logFullPayload="true">
+      <message>from payment-api</message>
     </log>
-    <payloadFactory media-type="json">
-      <format>{
-        "status":"FAILED",
-        "response_code":"HTTP_$1",
-        "response_message":"Non-JSON response from APS",
-        "amount":"$2",
-        "currency":"$3",
-        "fort_id": null
-      }</format>
-      <args>
-        <arg expression="$axis2:HTTP_SC"/>
-        <arg expression="get-property('amount')"/>
-        <arg expression="get-property('currency')"/>
-      </args>
-    </payloadFactory>
-    <property name="messageType" scope="axis2" type="STRING" value="application/json"/>
-  </else>
-</filter>
 
+    <!-- ثابتات التاجر -->
+    <property name="access_code"         scope="default" type="STRING" value="kJCjkMslRQUSzGDMUb58"/>
+    <property name="merchant_identifier" scope="default" type="STRING" value="HPEpXRQn"/>
+    <property name="sha_request_phrase"  scope="default" type="STRING" value="54LdvuI4bpMaq1/3dv8M.x_$"/>
+    <property name="sha_response_phrase" scope="default" type="STRING" value="15/UErLKeX/uqhfugPbvNz)-"/>
 
-<property name="status_text" scope="default" type="STRING" value="FAILED"/>
-<filter source="json-eval($.status)" regex="14">
-  <then>
-    <property name="status_text" scope="default" type="STRING" value="SUCCESS"/>
-  </then>
-</filter>
+    <!-- القيم من JSON -->
+    <property name="merchant_reference" scope="default" type="STRING" expression="json-eval($.merchant_reference)"/>
+    <property name="amount"             scope="default" type="STRING" expression="json-eval($.amount)"/>
+    <property name="currency"           scope="default" type="STRING" expression="json-eval($.currency)"/>
+    <property name="token_name"         scope="default" type="STRING" expression="json-eval($.token_name)"/>
+    <property name="customer_email"     scope="default" type="STRING" expression="json-eval($.customer_email)"/>
+    <property name="language"           scope="default" type="STRING" expression="json-eval($.language)"/>
 
-
-      <dbreport>
-        <connection>
-          <pool>
-            <driver>com.mysql.cj.jdbc.Driver</driver>
-            <url>jdbc:mysql://localhost:3306/APS_DB?useSSL=false&amp;allowPublicKeyRetrieval=true&amp;serverTimezone=UTC</url>
-            <user>Essa</user>
-            <password>Essa</password>
-          </pool>
-        </connection>
-        <statement>
-          <sql>
-            INSERT INTO purchases (user_id, merchant_reference, fort_id, amount_minor, currency, status, response_code, response_message, created_at, updated_at)
-            VALUES (
-              (SELECT id FROM users WHERE token_name = ? LIMIT 1),
-              ?, ?, ?, ?, ?, ?, ?, NOW(), NOW()
-            )
-            ON DUPLICATE KEY UPDATE
-              fort_id         = VALUES(fort_id),
-              amount_minor    = VALUES(amount_minor),
-              currency        = VALUES(currency),
-              status          = VALUES(status),
-              response_code   = VALUES(response_code),
-              response_message= VALUES(response_message),
-              updated_at      = NOW()
-          </sql>
-          <parameter expression="get-property('token_name')"         type="VARCHAR"/>
-          <parameter expression="get-property('merchant_reference')" type="VARCHAR"/>
-          <parameter expression="json-eval($.fort_id)"               type="VARCHAR"/>
-          <parameter expression="json-eval($.amount)"                type="INTEGER"/>
-          <parameter expression="json-eval($.currency)"              type="VARCHAR"/>
-<parameter expression="get-property('status_text')" type="VARCHAR"/>
-          <parameter expression="json-eval($.response_code)"         type="VARCHAR"/>
-          <parameter expression="json-eval($.response_message)"      type="VARCHAR"/>
-        </statement>
-      </dbreport>
-
+    <!-- Validation -->
+    <filter source="get-property('merchant_reference')" regex="^$"><then>
+      <payloadFactory media-type="json"><format>{"error":"merchant_reference is required"}</format></payloadFactory>
       <property name="messageType" scope="axis2" type="STRING" value="application/json"/>
-      <respond/>
-    </inSequence>
-  </resource>
+      <respond/><drop/>
+    </then></filter>
+    <filter source="get-property('amount')" regex="^$|[^0-9]"><then>
+      <payloadFactory media-type="json"><format>{"error":"amount must be minor units"}</format></payloadFactory>
+      <property name="messageType" scope="axis2" type="STRING" value="application/json"/>
+      <respond/><drop/>
+    </then></filter>
+    <filter source="get-property('currency')" regex="^$"><then>
+      <payloadFactory media-type="json"><format>{"error":"currency is required"}</format></payloadFactory>
+      <property name="messageType" scope="axis2" type="STRING" value="application/json"/>
+      <respond/><drop/>
+    </then></filter>
+    <filter source="get-property('token_name')" regex="^$"><then>
+      <payloadFactory media-type="json"><format>{"error":"token_name is required"}</format></payloadFactory>
+      <property name="messageType" scope="axis2" type="STRING" value="application/json"/>
+      <respond/><drop/>
+    </then></filter>
+
+    <!-- Language fallback -->
+    <filter source="get-property('language')" regex="^$"><then>
+      <property name="language" scope="default" type="STRING" value="en"/>
+    </then></filter>
+
+    <!-- Build APS purchase request -->
+    <script language="js"><![CDATA[
+      var MessageDigest = Java.type('java.security.MessageDigest');
+      var Formatter     = Java.type('java.util.Formatter');
+      var TreeMap       = Java.type('java.util.TreeMap');
+
+      function S(v){ return (v==null) ? "" : String(v).trim(); }
+      function hex(bytes){
+        var f = new Formatter();
+        for (var i=0;i<bytes.length;i++) f.format("%02x", (bytes[i] & 0xff));
+        var s = f.toString(); f.close(); return s;
+      }
+
+      var phrase = S(mc.getProperty("sha_request_phrase"));
+      var params = new TreeMap();
+
+      function put(k){ var v=S(mc.getProperty(k)); if(v.length>0) params.put(k,v); }
+
+      put("access_code");
+      put("amount");
+      put("currency");
+      put("customer_email");
+      put("language");
+      put("merchant_identifier");
+      put("merchant_reference");
+      put("token_name");
+      params.put("command","PURCHASE");
+
+      // build signature string
+      var sb = new java.lang.StringBuilder();
+      sb.append(phrase);
+      var it=params.entrySet().iterator();
+      while(it.hasNext()){
+        var e=it.next();
+        sb.append(e.getKey()).append("=").append(e.getValue());
+      }
+      sb.append(phrase);
+
+      var md = MessageDigest.getInstance("SHA-256");
+      var signature = hex(md.digest(sb.toString().getBytes("UTF-8")));
+      params.put("signature",signature);
+
+      // prepare JSON body
+      var o={};
+      var it2=params.entrySet().iterator();
+      while(it2.hasNext()){var e2=it2.next();o[String(e2.getKey())]=String(e2.getValue());}
+      mc.setPayloadJSON(o);
+    ]]></script>
+    <log category="INFO" logMessageID="false" logFullPayload="true">
+      <message>from payment-api02</message>
+    </log>
+
+    <header name="Content-Type" scope="transport" value="application/json"/>
+    <call>
+      <endpoint><http method="POST" uri-template="https://sbpaymentservices.payfort.com/FortAPI/paymentApi"/></endpoint>
+    </call>
+
+    <!-- handle APS response -->
+    <property name="HTTP_SC" scope="axis2" expression="$axis2:HTTP_SC"/>
+    <property name="CT"      scope="transport" expression="$trp:Content-Type"/>
+
+    <filter source="$trp:Content-Type" regex="(?i)^application/json">
+      <then/>
+      <else>
+        <payloadFactory media-type="json">
+          <format>{
+            "status":"FAILED",
+            "response_code":"HTTP_$1",
+            "response_message":"Non-JSON response from APS",
+            "fort_id": null
+          }</format>
+          <args><arg expression="$axis2:HTTP_SC"/></args>
+        </payloadFactory>
+        <property name="messageType" scope="axis2" type="STRING" value="application/json"/>
+      </else>
+    </filter>
+
+    <!-- translate status -->
+    <property name="status_text" scope="default" type="STRING" value="FAILED"/>
+    <filter source="json-eval($.status)" regex="14">
+      <then><property name="status_text" scope="default" type="STRING" value="SUCCESS"/></then>
+    </filter>
+
+    <!-- update DB -->
+    <dbreport>
+      <connection>
+        <pool>
+          <driver>com.mysql.cj.jdbc.Driver</driver>
+          <url>jdbc:mysql://localhost:3306/aps_db?useSSL=false&amp;allowPublicKeyRetrieval=true&amp;serverTimezone=UTC</url>
+          <user>Essa</user>
+          <password>Essa</password>
+        </pool>
+      </connection>
+      <statement>
+        <sql>
+          INSERT INTO purchases (user_id, merchant_reference, fort_id, amount_minor, currency, status, response_code, response_message, created_at, updated_at)
+          VALUES (
+            (SELECT id FROM users WHERE token_name = ? LIMIT 1),
+            ?, ?, ?, ?, ?, ?, ?, NOW(), NOW()
+          )
+          ON DUPLICATE KEY UPDATE
+            fort_id         = VALUES(fort_id),
+            status          = VALUES(status),
+            response_code   = VALUES(response_code),
+            response_message= VALUES(response_message),
+            updated_at      = NOW()
+        </sql>
+<parameter expression="get-property('token_name')"         type="VARCHAR"/>
+<parameter expression="get-property('merchant_reference')" type="VARCHAR"/>
+<parameter expression="json-eval($.fort_id)"               type="VARCHAR"/>
+<parameter expression="get-property('amount')"             type="INTEGER"/>
+<parameter expression="get-property('currency')"           type="VARCHAR"/>
+<parameter expression="get-property('status_text')"        type="VARCHAR"/>
+<parameter expression="json-eval($.response_code)"         type="VARCHAR"/>
+<parameter expression="json-eval($.response_message)"      type="VARCHAR"/>
+
+      </statement>
+    </dbreport>
+
+    <property name="messageType" scope="axis2" type="STRING" value="application/json"/>
+    <respond/>
+  </inSequence>
+</resource>
+
 
   <!-- ========================= 5) PAYMENT EXISTING (تكرار الشراء) ========================= -->
   <resource methods="POST" uri-template="/payment-existing">
