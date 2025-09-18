@@ -52,7 +52,7 @@
       <property name="return_url"  scope="default" type="STRING" value="http://localhost:8290/aps/token-callback"/>
       <property name="gateway_url" scope="default" type="STRING" value="https://sbcheckout.payfort.com/FortAPI/paymentPage"/>
 
-      <!-- سجلّ عملية PENDING مربوطه بالمستخدم -->
+      <!-- PENDING -->
       <dbreport>
         <connection>
           <pool>
@@ -247,7 +247,8 @@
                   <result name="a_email"    column="a_email"/>
                                 </statement>
                             </dblookup>
-                            <!-- تمرير القيم كهيدرز احتياط + body form -->
+
+                            <!-- payment-api -->
               <payloadFactory media-type="json">
                   <format>{
                     "merchant_reference":"$1",
@@ -272,7 +273,6 @@
                 <endpoint><http method="POST" uri-template="http://localhost:8290/aps/payment-api"/>
                                 </endpoint>
                             </call>
-                            <!-- حضّر رسالة مختصرة بناءً على رد الشراء -->
               <filter source="json-eval($.status)" regex="14">
                 <then><property name="result_msg" scope="default" type="STRING" value="تمت عملية الشراء بنجاح ✅"/>
                                 </then>
@@ -283,7 +283,6 @@
                     </filter>
                 </then>
             </filter>
-            <!-- رجّع نصّ بسيط يدل على النتيجة -->
       <payloadFactory media-type="text">
         <format>$1</format>
         <args>
@@ -302,13 +301,11 @@
       <message>from payment-api</message>
     </log>
 
-    <!-- ثابتات التاجر -->
     <property name="access_code"         scope="default" type="STRING" value="kJCjkMslRQUSzGDMUb58"/>
     <property name="merchant_identifier" scope="default" type="STRING" value="HPEpXRQn"/>
     <property name="sha_request_phrase"  scope="default" type="STRING" value="54LdvuI4bpMaq1/3dv8M.x_$"/>
     <property name="sha_response_phrase" scope="default" type="STRING" value="15/UErLKeX/uqhfugPbvNz)-"/>
 
-    <!-- القيم من JSON -->
     <property name="merchant_reference" scope="default" type="STRING" expression="json-eval($.merchant_reference)"/>
     <property name="amount"             scope="default" type="STRING" expression="json-eval($.amount)"/>
     <property name="currency"           scope="default" type="STRING" expression="json-eval($.currency)"/>
@@ -420,7 +417,6 @@
       </else>
     </filter>
 
-    <!-- translate status -->
     <property name="status_text" scope="default" type="STRING" value="FAILED"/>
     <filter source="json-eval($.status)" regex="14">
       <then><property name="status_text" scope="default" type="STRING" value="SUCCESS"/></then>
@@ -546,33 +542,56 @@
       <property name="token_name" scope="default" type="STRING" expression="get-property('a_token')"/>
 
       <!-- (payment-api) -->
-      <script language="js"><![CDATA[
-        var MD=Java.type('java.security.MessageDigest');
-        var F=Java.type('java.util.Formatter');
-        var TM=Java.type('java.util.TreeMap');
-        function S(v){return v==null?"":String(v).trim();}
-        function hex(b){var f=new F();for(var i=0;i<b.length;i++)f.format('%02x',(b[i]&0xff));var s=f.toString();f.close();return s;}
+     <script language="js"><![CDATA[
+      var MessageDigest = Java.type('java.security.MessageDigest');
+      var Formatter     = Java.type('java.util.Formatter');
+      var TreeMap       = Java.type('java.util.TreeMap');
 
-        var p=new TM();
-        p.put('access_code',         S(mc.getProperty('access_code')));
-        p.put('amount',              S(mc.getProperty('amount')));
-        p.put('command',             'PURCHASE');
-        p.put('currency',            S(mc.getProperty('currency')));
-        p.put('merchant_identifier', S(mc.getProperty('merchant_identifier')));
-        p.put('merchant_reference',  S(mc.getProperty('merchant_reference')));
-        p.put('token_name',          S(mc.getProperty('token_name')));
-        p.put('customer_email',      S(mc.getProperty('customer_email')));
-        p.put('return_url',          'http://localhost:8290/aps/token-callback');
+      function S(v){ return (v==null) ? "" : String(v).trim(); }
+      function hex(bytes){
+        var f = new Formatter();
+        for (var i=0;i<bytes.length;i++) f.format("%02x", (bytes[i] & 0xff));
+        var s = f.toString(); f.close(); return s;
+      }
 
-        var phrase=S(mc.getProperty('sha_request_phrase'));
-        var sb=new java.lang.StringBuilder(); sb.append(phrase);
-        var it=p.entrySet().iterator(); while(it.hasNext()){var e=it.next(); sb.append(e.getKey()).append('=').append(S(e.getValue()));}
-        sb.append(phrase);
-        p.put('signature', hex(MD.getInstance('SHA-256').digest(String(sb.toString()).getBytes('UTF-8'))));
+      var phrase = S(mc.getProperty("sha_request_phrase"));
+      var params = new TreeMap();
 
-        var body={}; var it2=p.entrySet().iterator(); while(it2.hasNext()){var e2=it2.next(); body[String(e2.getKey())]=String(e2.getValue());}
-        mc.setPayloadJSON(body);
-      ]]></script>
+      function put(k){ var v=S(mc.getProperty(k)); if(v.length>0) params.put(k,v); }
+
+      put("access_code");
+      put("amount");
+      put("currency");
+      put("customer_email");
+      put("language");
+      put("merchant_identifier");
+      put("merchant_reference");
+      put("token_name");
+      params.put("command","PURCHASE");
+
+      // build signature string
+      var sb = new java.lang.StringBuilder();
+      sb.append(phrase);
+      var it=params.entrySet().iterator();
+      while(it.hasNext()){
+        var e=it.next();
+        sb.append(e.getKey()).append("=").append(e.getValue());
+      }
+      sb.append(phrase);
+
+      var md = MessageDigest.getInstance("SHA-256");
+      var signature = hex(md.digest(sb.toString().getBytes("UTF-8")));
+      params.put("signature",signature);
+
+      // prepare JSON body
+      var o={};
+      var it2=params.entrySet().iterator();
+      while(it2.hasNext()){var e2=it2.next();o[String(e2.getKey())]=String(e2.getValue());}
+      mc.setPayloadJSON(o);
+    ]]></script>
+      <log category="INFO" logMessageID="false" logFullPayload="true">
+        <message>from payment-existing</message>
+      </log>
 
       <header name="Content-Type" scope="transport" value="application/json"/>
       <call>
@@ -718,6 +737,9 @@
         var body={}; var it2=p.entrySet().iterator(); while(it2.hasNext()){var e2=it2.next(); body[String(e2.getKey())]=String(e2.getValue());}
         mc.setPayloadJSON(body);
       ]]></script>
+      <log category="INFO" logMessageID="false" logFullPayload="true">
+        <message>from refund</message>
+      </log>
 
       <header name="Content-Type" scope="transport" value="application/json"/>
       <call>
