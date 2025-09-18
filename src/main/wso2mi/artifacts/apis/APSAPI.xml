@@ -391,17 +391,21 @@
     <log category="INFO" logMessageID="false" logFullPayload="true">
       <message>from payment-api02</message>
     </log>
-
-    <header name="Content-Type" scope="transport" value="application/json"/>
+<header name="Content-Type" scope="transport" value="application/json"/>
+<property name="messageType" scope="axis2" type="STRING" value="application/json"/>
+<property name="ContentType" scope="axis2" type="STRING" value="application/json"/>
+    <log category="INFO" logMessageID="false" logFullPayload="true">
+      <message>from payment-api02</message>
+    </log>
+ 
     <call>
       <endpoint><http method="POST" uri-template="https://sbpaymentservices.payfort.com/FortAPI/paymentApi"/></endpoint>
     </call>
 
-    <!-- handle APS response -->
+    <!-- handle APS response 
     <property name="HTTP_SC" scope="axis2" expression="$axis2:HTTP_SC"/>
-    <property name="CT"      scope="transport" expression="$trp:Content-Type"/>
-
-    <filter source="$trp:Content-Type" regex="(?i)^application/json">
+    <property name="CT"      scope="transport" expression="$trp:Content-Type"/> -->
+<!-- <filter source="$trp:Content-Type" regex="(?i)^application/json">
       <then/>
       <else>
         <payloadFactory media-type="json">
@@ -416,7 +420,8 @@
         <property name="messageType" scope="axis2" type="STRING" value="application/json"/>
       </else>
     </filter>
-
+ -->
+   
     <property name="status_text" scope="default" type="STRING" value="FAILED"/>
     <filter source="json-eval($.status)" regex="14">
       <then><property name="status_text" scope="default" type="STRING" value="SUCCESS"/></then>
@@ -505,30 +510,51 @@
 
       <!--   token_name + تحقق من وجود عملية ناجحة سابقة -->
       <dblookup>
-        <connection>
-          <pool>
+    <connection>
+        <pool>
             <driver>com.mysql.cj.jdbc.Driver</driver>
             <url>jdbc:mysql://localhost:3306/APS_DB?useSSL=false&amp;allowPublicKeyRetrieval=true&amp;serverTimezone=UTC</url>
             <user>Essa</user>
             <password>Essa</password>
-          </pool>
-        </connection>
-        <statement>
-          <sql>
-            SELECT u.token_name AS a_token,
-                   SUM(CASE WHEN p.status='14' THEN 1 ELSE 0 END) AS a_success
+        </pool>
+    </connection>
+    <statement>
+        <sql>
+            SELECT u.id,
+                   u.name,
+                   u.email,
+                   u.token_name,
+                   CASE WHEN EXISTS (
+                        SELECT 1 
+                          FROM purchases p 
+                         WHERE p.user_id = u.id 
+                           AND p.status = 'SUCCESS'
+                   ) THEN 1 ELSE 0 END AS has_success
               FROM users u
-              LEFT JOIN purchases p ON p.user_id = u.id
              WHERE u.email = ?
-             GROUP BY u.token_name
-          </sql>
-          <parameter expression="get-property('customer_email')" type="VARCHAR"/>
-          <result name="a_token"   column="a_token"/>
-          <result name="a_success" column="a_success"/>
-        </statement>
-      </dblookup>
+             LIMIT 1
+        </sql>
+        <parameter expression="get-property('customer_email')" type="VARCHAR"/>
+        
+        <!-- القيم ترجع كـ properties -->
+        <result name="user_id"      column="id"/>
+        <result name="user_name"    column="name"/>
+        <result name="user_email"   column="email"/>
+        <result name="token_name"   column="token_name"/>
+        <result name="has_success"  column="has_success"/>
+    </statement>
+</dblookup>
 
-      <filter source="get-property('a_token')" regex="^$"><then>
+<log level="custom">
+  <property name="DBG_user_id"      expression="get-property('user_id')"/>
+  <property name="DBG_user_email"   expression="get-property('user_email')"/>
+  <property name="DBG_token_name"   expression="get-property('token_name')"/>
+  <property name="DBG_has_success"  expression="get-property('has_success')"/>
+</log>
+
+
+  <property name="token_name" scope="default" type="STRING" expression="get-property('token_name')"/>
+<!-- <filter source="get-property('a_token')" regex="^$"><then>
         <payloadFactory media-type="json"><format>{"error":"no saved token for this customer"}</format></payloadFactory>
         <property name="messageType" scope="axis2" type="STRING" value="application/json"/>
         <respond/><drop/>
@@ -537,73 +563,112 @@
         <payloadFactory media-type="json"><format>{"error":"no previous successful purchase"}</format></payloadFactory>
         <property name="messageType" scope="axis2" type="STRING" value="application/json"/>
         <respond/><drop/>
-      </then></filter>
-
-      <property name="token_name" scope="default" type="STRING" expression="get-property('a_token')"/>
-
-      <!-- (payment-api) -->
+      </then></filter> -->
      <script language="js"><![CDATA[
-      var MessageDigest = Java.type('java.security.MessageDigest');
-      var Formatter     = Java.type('java.util.Formatter');
-      var TreeMap       = Java.type('java.util.TreeMap');
+  var MessageDigest = Java.type('java.security.MessageDigest');
+  var Formatter     = Java.type('java.util.Formatter');
+  var TreeMap       = Java.type('java.util.TreeMap');
 
-      function S(v){ return (v==null) ? "" : String(v).trim(); }
-      function hex(bytes){
-        var f = new Formatter();
-        for (var i=0;i<bytes.length;i++) f.format("%02x", (bytes[i] & 0xff));
-        var s = f.toString(); f.close(); return s;
-      }
+  function S(v){ return (v==null) ? "" : String(v).trim(); }
+  function hex(bytes){
+    var f=new Formatter();
+    for (var i=0;i<bytes.length;i++) f.format("%02x",(bytes[i]&0xff));
+    var s=f.toString(); f.close(); return s;
+  }
 
-      var phrase = S(mc.getProperty("sha_request_phrase"));
-      var params = new TreeMap();
+  // عبارات التوقيع من الـ properties
+  var phrase = S(mc.getProperty("sha_request_phrase"));
 
-      function put(k){ var v=S(mc.getProperty(k)); if(v.length>0) params.put(k,v); }
+  // جسم الطلب القادم من العميل
+  var input = mc.getPayloadJSON();
 
-      put("access_code");
-      put("amount");
-      put("currency");
-      put("customer_email");
-      put("language");
-      put("merchant_identifier");
-      put("merchant_reference");
-      put("token_name");
-      params.put("command","PURCHASE");
+  // دمج قيم ثابتة من MI
+  input["access_code"]         = S(mc.getProperty("access_code"));
+  input["merchant_identifier"] = S(mc.getProperty("merchant_identifier"));
+  input["token_name"]          = S(mc.getProperty("token_name"));   // جاي من dblookup في /payment-existing
+  input["command"]             = "PURCHASE";                         // ثابته هنا
 
-      // build signature string
-      var sb = new java.lang.StringBuilder();
-      sb.append(phrase);
-      var it=params.entrySet().iterator();
-      while(it.hasNext()){
-        var e=it.next();
-        sb.append(e.getKey()).append("=").append(e.getValue());
-      }
-      sb.append(phrase);
+  // TreeMap يحفظ ترتيب المفاتيح أبجديًا للتوقيع
+  var params = new TreeMap();
+  function put(k){ var v=S(input[k]); if(v.length>0) params.put(k, v); }
 
-      var md = MessageDigest.getInstance("SHA-256");
-      var signature = hex(md.digest(sb.toString().getBytes("UTF-8")));
-      params.put("signature",signature);
+  put("access_code");
+  put("amount");
+  put("card_security_code");     // سيتم تعبئته أدناه إن وُجد
+  put("command");
+  put("currency");
+  put("customer_email");
+  put("language");
+  put("merchant_identifier");
+  put("merchant_reference");
+  put("token_name");
 
-      // prepare JSON body
-      var o={};
-      var it2=params.entrySet().iterator();
-      while(it2.hasNext()){var e2=it2.next();o[String(e2.getKey())]=String(e2.getValue());}
-      mc.setPayloadJSON(o);
-    ]]></script>
-      <log category="INFO" logMessageID="false" logFullPayload="true">
-        <message>from payment-existing</message>
-      </log>
+  // CVV اختياري: إن وُجد ضِفه للـ params (يدخل في التوقيع) وللبودي النهائي
+  var cvv = S(input["card_security_code"]);
+  if (cvv.length > 0) {
+    params.put("card_security_code", cvv); // يدخل في نص التوقيع
+  } else {
+    // تأكد أنه غير موجود حتى لا يختلف التوقيع عمّا يُرسل
+    params.remove("card_security_code");
+  }
+
+  // بناء نص التوقيع: phrase + key=value ... + phrase (بدون & أو فواصل)
+  var sb = new java.lang.StringBuilder();
+  sb.append(phrase);
+  var it = params.entrySet().iterator();
+  while (it.hasNext()) {
+    var e = it.next();
+    sb.append(e.getKey()).append("=").append(e.getValue());
+  }
+  sb.append(phrase);
+
+  // حساب التوقيع SHA-256 (hex lower-case)
+  var md = MessageDigest.getInstance("SHA-256");
+  var signature = hex(md.digest(sb.toString().getBytes("UTF-8")));
+  params.put("signature", signature);
+
+  // إعداد JSON النهائي بالضبط من نفس القيم التي دخلت التوقيع
+  var out = {};
+  var it2 = params.entrySet().iterator();
+  while (it2.hasNext()) {
+    var e2 = it2.next();
+    out[String(e2.getKey())] = String(e2.getValue());
+  }
+
+  // التشخيص: اطبع نص التوقيع والقيمة
+  mc.setProperty("SIGN_STRING", sb.toString());
+  mc.setProperty("SIGNATURE", signature);
+
+  // إرسال البودي النهائي
+  mc.setPayloadJSON(out);
+]]></script>
+
+
+<log level="custom">
+  <property name="SIGN_STRING" expression="get-property('SIGN_STRING')"/>
+  <property name="SIGNATURE" expression="get-property('SIGNATURE')"/>
+</log>
+
 
       <header name="Content-Type" scope="transport" value="application/json"/>
-      <call>
-        <endpoint><http method="POST" uri-template="https://sbpaymentservices.payfort.com/FortAPI/paymentApi"/></endpoint>
-      </call>
+<property name="messageType" scope="axis2" type="STRING" value="application/json"/>
+<property name="ContentType" scope="axis2" type="STRING" value="application/json"/>
+    <log category="INFO" logMessageID="false" logFullPayload="true">
+      <message>from payment-api02</message>
+    </log>
+ 
+    <call>
+      <endpoint><http method="POST" uri-template="https://sbpaymentservices.payfort.com/FortAPI/paymentApi"/></endpoint>
+    </call>
 
-<property name="status_text" scope="default" type="STRING" value="FAILED"/>
+    <log level="full" category="INFO"/>
+
+<!-- <property name="status_text" scope="default" type="STRING" value="FAILED"/>
 <filter source="json-eval($.status)" regex="14">
-  <then>
+  <then>-->
+
     <property name="status_text" scope="default" type="STRING" value="SUCCESS"/>
-  </then>
-</filter>
+
 
 
       <dbreport>
