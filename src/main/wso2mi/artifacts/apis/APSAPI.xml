@@ -576,25 +576,21 @@
     var s=f.toString(); f.close(); return s;
   }
 
-  // عبارات التوقيع من الـ properties
   var phrase = S(mc.getProperty("sha_request_phrase"));
 
-  // جسم الطلب القادم من العميل
   var input = mc.getPayloadJSON();
 
-  // دمج قيم ثابتة من MI
   input["access_code"]         = S(mc.getProperty("access_code"));
   input["merchant_identifier"] = S(mc.getProperty("merchant_identifier"));
-  input["token_name"]          = S(mc.getProperty("token_name"));   // جاي من dblookup في /payment-existing
-  input["command"]             = "PURCHASE";                         // ثابته هنا
+  input["token_name"]          = S(mc.getProperty("token_name"));   
+  input["command"]             = "PURCHASE";                        
 
-  // TreeMap يحفظ ترتيب المفاتيح أبجديًا للتوقيع
   var params = new TreeMap();
   function put(k){ var v=S(input[k]); if(v.length>0) params.put(k, v); }
 
   put("access_code");
   put("amount");
-  put("card_security_code");     // سيتم تعبئته أدناه إن وُجد
+  put("card_security_code");    
   put("command");
   put("currency");
   put("customer_email");
@@ -603,16 +599,13 @@
   put("merchant_reference");
   put("token_name");
 
-  // CVV اختياري: إن وُجد ضِفه للـ params (يدخل في التوقيع) وللبودي النهائي
   var cvv = S(input["card_security_code"]);
   if (cvv.length > 0) {
-    params.put("card_security_code", cvv); // يدخل في نص التوقيع
+    params.put("card_security_code", cvv);
   } else {
-    // تأكد أنه غير موجود حتى لا يختلف التوقيع عمّا يُرسل
     params.remove("card_security_code");
   }
 
-  // بناء نص التوقيع: phrase + key=value ... + phrase (بدون & أو فواصل)
   var sb = new java.lang.StringBuilder();
   sb.append(phrase);
   var it = params.entrySet().iterator();
@@ -622,12 +615,10 @@
   }
   sb.append(phrase);
 
-  // حساب التوقيع SHA-256 (hex lower-case)
   var md = MessageDigest.getInstance("SHA-256");
   var signature = hex(md.digest(sb.toString().getBytes("UTF-8")));
   params.put("signature", signature);
 
-  // إعداد JSON النهائي بالضبط من نفس القيم التي دخلت التوقيع
   var out = {};
   var it2 = params.entrySet().iterator();
   while (it2.hasNext()) {
