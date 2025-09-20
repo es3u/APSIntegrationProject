@@ -626,11 +626,9 @@
     out[String(e2.getKey())] = String(e2.getValue());
   }
 
-  // التشخيص: اطبع نص التوقيع والقيمة
   mc.setProperty("SIGN_STRING", sb.toString());
   mc.setProperty("SIGNATURE", signature);
 
-  // إرسال البودي النهائي
   mc.setPayloadJSON(out);
 ]]></script>
 
