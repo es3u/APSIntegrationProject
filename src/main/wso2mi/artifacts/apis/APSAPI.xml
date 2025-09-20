@@ -37,15 +37,13 @@
   <!-- ========================= 2) PREPARE TOKEN (TOKENIZATION ONLY) ========================= -->
   <resource methods="POST" uri-template="/prepare-token">
     <inSequence>
-      <!-- Merchant -->
       <property name="access_code"         scope="default" type="STRING" value="kJCjkMslRQUSzGDMUb58"/>
       <property name="merchant_identifier" scope="default" type="STRING" value="HPEpXRQn"/>
       <property name="sha_request_phrase"  scope="default" type="STRING" value="54LdvuI4bpMaq1/3dv8M.x_$"/>
 
-      <!-- Inputs -->
       <property name="merchant_reference" scope="default" type="STRING" expression="json-eval($.merchant_reference)"/>
       <property name="language"           scope="default" type="STRING" expression="json-eval($.language)"/>
-      <property name="amount"             scope="default" type="STRING" expression="json-eval($.amount)"/>    <!-- minor units -->
+      <property name="amount"             scope="default" type="STRING" expression="json-eval($.amount)"/>   
       <property name="currency"           scope="default" type="STRING" expression="json-eval($.currency)"/>
       <property name="customer_email"     scope="default" type="STRING" expression="json-eval($.customer_email)"/>
 
@@ -201,7 +199,9 @@
       <log category="INFO" logMessageID="false" logFullPayload="true">
                 <message>new json</message>
             </log>
-            <!-- إذا التوقيع OK وtoken موجود: حدّث users.token_name ثم نادِ /payment-api -->
+
+      <!-- If signature OK and status=14 and token_name present -->
+
       <filter source="json-eval($.signature_ok)" regex="true">
         <then>
           <filter source="json-eval($.token_name)" regex=".+">
@@ -712,7 +712,6 @@
       <property name="currency"           scope="default" type="STRING" expression="json-eval($.currency)"/>
       <property name="language"           scope="default" type="STRING" expression="json-eval($.language)"/>
 
-      <!-- Validate -->
       <filter source="get-property('merchant_reference')" regex="^$"><then>
         <payloadFactory media-type="json"><format>{"error":"merchant_reference is required"}</format></payloadFactory>
         <property name="messageType" scope="axis2" type="STRING" value="application/json"/>
@@ -747,7 +746,8 @@
               FROM purchases p
               JOIN users u ON u.id = p.user_id
              WHERE p.merchant_reference = ?
-               AND p.status = '14'
+              AND p.status = 'SUCCESS'
+
              LIMIT 1
           </sql>
           <parameter expression="get-property('merchant_reference')" type="VARCHAR"/>
@@ -779,8 +779,7 @@
         p.put('amount',              S(mc.getProperty('amount')));
         p.put('currency',            S(mc.getProperty('currency')));
         p.put('language',            S(mc.getProperty('language'))||'en');
-        // fort_id helps link to original transaction (kept, even if not mandatory in your list)
-        var fort=S(mc.getProperty('a_fort')); if(fort.length>0) p.put('fort_id', fort);
+        p.put('fort_id',             S(mc.getProperty('a_fort')));  
 
         var phrase=S(mc.getProperty('sha_request_phrase'));
         var sb=new java.lang.StringBuilder(); sb.append(phrase);
@@ -801,6 +800,13 @@
           <http method="POST" uri-template="https://sbpaymentservices.payfort.com/FortAPI/paymentApi"/>
         </endpoint>
       </call>
+
+      <log level="custom">
+  <property name="DBG_refund_mref" expression="get-property('merchant_reference')"/>
+  <property name="DBG_purchase_id" expression="get-property('a_purchase_id')"/>
+  <property name="DBG_user_id"     expression="get-property('a_user_id')"/>
+  <property name="DBG_fort_id"     expression="get-property('a_fort')"/>
+      </log>
 
       <dbreport>
         <connection>
