@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Register Customer | APS</title>
+  <style>
+    :root {
+      --primary:#2563eb;
+      --bg:#0f172a;
+      --card:#111827;
+      --text:#e2e8f0;
+      --muted:#94a3b8;
+      --danger:#7f1d1d;
+      --danger-text:#fecaca;
+      --success:#0b3d17;
+      --success-text:#c7f9cc;
+      --radius:16px;
+      --gap:16px;
+    }
+    body {
+      margin:0; font-family:system-ui,-apple-system,"Segoe UI",Roboto;
+      background:var(--bg); color:var(--text);
+      display:grid; place-items:center; min-height:100vh;
+    }
+    .wrap {
+      width:min(720px, 94vw);
+      background:var(--card);
+      padding:32px;
+      border-radius:var(--radius);
+      box-shadow:0 10px 30px rgba(0,0,0,.35);
+    }
+    h1 {
+      margin:0 0 var(--gap); font-size:24px; font-weight:700;
+    }
+    label {
+      display:block; font-size:14px; color:var(--muted); margin-bottom:6px;
+    }
+    input {
+      width:100%; padding:12px;
+      border-radius:10px; border:1px solid #334155;
+      background:#0b1220; color:var(--text);
+      margin-bottom:var(--gap);
+    }
+    button {
+      width:100%; padding:14px;
+      border-radius:10px;
+      background:var(--primary); color:#fff;
+      border:0; cursor:pointer; font-weight:600;
+      transition:background .2s;
+    }
+    button:hover { background:#1e40af; }
+    .err,.ok {
+      margin-top:var(--gap);
+      padding:12px;
+      border-radius:10px; font-size:14px;
+      display:none;
+    }
+    .err { background:var(--danger); color:var(--danger-text); }
+    .ok { background:var(--success); color:var(--success-text); }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Register Customer</h1>
+    <label for="name">Name</label>
+    <input id="name" placeholder="e.g. Essa" />
+
+    <label for="email">Email</label>
+    <input id="email" placeholder="example@site.com" />
+
+    <button id="save">Register & Continue</button>
+    <div id="ok" class="ok"></div>
+    <div id="err" class="err"></div>
+  </div>
+
+<script>
+const $ = (id)=>document.getElementById(id);
+
+$('save').addEventListener('click', async ()=>{
+  const name = $('name').value.trim();
+  const email = $('email').value.trim();
+  const okBox = $('ok'), errBox = $('err');
+  okBox.style.display=errBox.style.display='none'; okBox.textContent=errBox.textContent='';
+
+  if(!name || !email){
+    errBox.textContent='Name and email are required';
+    errBox.style.display='block';
+    return;
+  }
+
+  try{
+    const res = await fetch('http://localhost:8290/aps/register-user', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({name,email})
+    });
+    if(!res.ok){ throw new Error('Registration failed: '+res.status); }
+
+    localStorage.setItem('APS_EMAIL', email);
+    okBox.textContent = 'Registered. Redirecting to checkout...';
+    okBox.style.display='block';
+    setTimeout(()=>{ window.location.href = 'purchase.html'; }, 600);
+  }catch(ex){
+    errBox.textContent = ex.message;
+    errBox.style.display='block';
+  }
+});
+</script>
+</body>
+</html>
